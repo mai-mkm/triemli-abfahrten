@@ -54,3 +54,20 @@ test('persisted state excludes GPS coordinates and map objects', () => {
   assert.equal(restored.gps.selected.id, '8503610');
   assert.equal(restored.manual.manualLocation, 'Zürich');
 });
+
+test('serialization limits stations to ten and clamps selection', () => {
+  const tabs = { gps: createTab(), manual: createTab() };
+  tabs.manual.stops = Array.from({ length: 14 }, (_, i) => ({ id: String(i), name: 'Stop ' + i }));
+  tabs.manual.index = 13;
+  const saved = serializeSavedTabs(tabs);
+  assert.equal(saved.manual.stops.length, 10);
+  assert.equal(saved.manual.index, 9);
+  assert.equal(restoreSavedTabs(saved).manual.index, 9);
+});
+
+test('serialization tolerates missing or malformed tab records', () => {
+  const saved = serializeSavedTabs({ gps: { stops: null, index: -5 } });
+  assert.deepEqual(saved.gps.stops, []);
+  assert.equal(saved.gps.index, 0);
+  assert.equal(saved.manual.manualLocation, '');
+});
