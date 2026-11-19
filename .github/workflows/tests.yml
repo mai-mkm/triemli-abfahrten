@@ -12,3 +12,14 @@ jobs:
           node-version: '22'
       - run: npm run check
       - run: npm test
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save @playwright/test@1.58.2
+      - run: npx playwright install --with-deps chromium
+      - run: node -e "require('fs').writeFileSync('playwright.config.cjs', 'module.exports={use:{baseURL:\\'http://127.0.0.1:4173\\'},webServer:{command:\\'python3 -m http.server 4173\\',url:\\'http://127.0.0.1:4173\\',reuseExistingServer:false}}')"
+      - run: npx playwright test tests/browser.spec.js --reporter=line
