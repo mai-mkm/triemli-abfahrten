@@ -123,6 +123,7 @@ if(loaded&&!visible.length&&!error)board.append(el('p','','Keine Abfahrten im ge
 async function refresh(){if(!activityController?.active||loading)return;loading=true;const requestGeneration=generation;error='';render();const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);requestController=controller;try{const url=new URL('https://transport.opendata.ch/v1/stationboard');url.searchParams.set('id',selected.id);url.searchParams.set('limit','100');const r=await fetch(url,{signal:controller.signal,cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const data=await r.json();if(!Array.isArray(data.stationboard))throw Error('Keine Abfahrtsliste erhalten');if(requestGeneration!==generation)return;rows=data.stationboard;loaded=true;updated=new Date()}catch(e){if(requestGeneration!==generation)return;error='Abruf fehlgeschlagen: '+(e.name==='AbortError'?'Zeitüberschreitung':e.message)+'. Bitte erneut aktualisieren.'}finally{clearTimeout(timer);if(requestController===controller)requestController=null;loading=false;render();if(requestGeneration!==generation&&activityController?.active)refresh()}}
 function startUpdates(){if(refreshInterval!==null)return;refresh();refreshInterval=setInterval(()=>{render();refresh()},10000);startGps()}
 function stopUpdates(){if(refreshInterval!==null){clearInterval(refreshInterval);refreshInterval=null}if(requestController)requestController.abort();stopGps()}
+let lastGpsPosition=null,gpsWatchId=null,activityController=null,refreshInterval=null,requestController=null;
 activityController=new ActivityController({onStart:startUpdates,onStop:stopUpdates});
 
 if(window.Framework7){try{window.fahrplanF7=new Framework7({el:'#app',name:'Fahrplan',theme:'ios',darkMode:true,iosTranslucentBars:false});}catch(e){console.warn('Framework7 Initialisierung:',e)}}
@@ -145,7 +146,6 @@ let geoGeneration=0,mode='gps',searchTimer=null,searchGeneration=0;
 const stateKey='fahrplan-state-v2';
 let storedTabs=null;try{storedTabs=JSON.parse(localStorage.getItem(stateKey))}catch(e){}
 const tabs=restoreSavedTabs(storedTabs);
-let lastGpsPosition=null,gpsWatchId=null,activityController=null,refreshInterval=null,requestController=null;
 function rememberTab(){const t=tabs[mode];t.selected={...selected};t.stops=nearbyStops.map(s=>({...s}));t.index=nearbyIndex;t.mapData=mapData;t.mapOpen=document.getElementById('mapAccordion').classList.contains('map-expanded');if(mode==='manual')t.manualLocation=search.value;try{localStorage.setItem(stateKey,JSON.stringify(serializeSavedTabs(tabs)))}catch(e){}}
 function restoreTab(){const t=tabs[mode];selected=t.selected?{...t.selected}:{id:'8503610',name:'Zürich, Triemli'};nearbyStops=t.stops||[];nearbyIndex=Math.max(0,Math.min(t.index||0,nearbyStops.length-1));mapData=t.mapData;nearby.hidden=!nearbyStops.length;renderNearbyCard();if(mode==='manual')search.value=t.manualLocation||'';setStationMapOpen(!!t.mapOpen&&!!mapData,false);generation++;rows=[];loaded=false;updated=null;render();refresh()}
 
