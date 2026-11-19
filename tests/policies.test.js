@@ -10,3 +10,7 @@ test('inaccurate position ignored',()=>assert.equal(shouldRefreshNearby({lat:47.
 test('station hysteresis',()=>{assert.equal(shouldSwitchStation({id:'a',distance:60},{id:'b',distance:35},20000),false);assert.equal(shouldSwitchStation({id:'a',distance:70},{id:'b',distance:35},20000),true)});
 test('switch cooldown',()=>assert.equal(shouldSwitchStation({id:'a',distance:70},{id:'b',distance:35},20000,15000),false));
 test('distance in meters',()=>assert.ok(distanceMeters({lat:47.36,lng:8.5},{lat:47.361,lng:8.5})>100));
+
+import {createTab,restoreSavedTabs} from '../js/domain/tab-state.js';
+test('tabs independent after restoration',()=>{const t=restoreSavedTabs({gps:{selected:{id:'a',name:'A'}},manual:{selected:{id:'b',name:'B'},stops:[{id:'b',name:'B'}]}});assert.equal(t.gps.selected.id,'a');assert.equal(t.manual.selected.id,'b');t.gps.selected.id='c';assert.equal(t.manual.selected.id,'b')});
+test('malformed stored state is sanitized',()=>{const t=restoreSavedTabs({gps:{index:-3,stops:[{}, {id:'1',name:'One'}],mapOpen:1},manual:null});assert.equal(t.gps.index,0);assert.equal(t.gps.stops.length,1);assert.equal(t.manual.selected,null)});
