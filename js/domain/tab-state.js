@@ -30,3 +30,23 @@ export function restoreSavedTabs(raw) {
   }
   return tabs;
 }
+
+/** Persist only user choices; never persist GPS coordinates or map instances. */
+export function serializeSavedTabs(tabs) {
+  const result = {};
+  for (const key of ['gps', 'manual']) {
+    const tab = tabs?.[key] ?? createTab();
+    result[key] = {
+      selected: tab.selected?.id != null && tab.selected?.name
+        ? { id: String(tab.selected.id), name: String(tab.selected.name) } : null,
+      stops: Array.isArray(tab.stops)
+        ? tab.stops.filter(s => s?.id != null && s?.name)
+            .slice(0, 10).map(s => ({ id: String(s.id), name: String(s.name) }))
+        : [],
+      index: Number.isInteger(tab.index) ? Math.max(0, tab.index) : 0,
+      manualLocation: key === 'manual' && typeof tab.manualLocation === 'string'
+        ? tab.manualLocation : ''
+    };
+  }
+  return result;
+}
