@@ -43,7 +43,8 @@ export function serializeSavedTabs(tabs) {
         ? tab.stops.filter(s => s?.id != null && s?.name)
             .slice(0, 10).map(s => ({ id: String(s.id), name: String(s.name) }))
         : [],
-      index: Number.isInteger(tab.index) ? Math.max(0, tab.index) : 0,
+      index: Number.isInteger(tab.index)
+        ? Math.min(Math.max(0, tab.index), Math.max(0, Math.min(tab.stops?.length ?? 0, 10) - 1)) : 0,
       manualLocation: key === 'manual' && typeof tab.manualLocation === 'string'
         ? tab.manualLocation : ''
     };
