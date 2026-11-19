@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createTab, restoreSavedTabs } from '../js/domain/tab-state.js';
+import { createTab, restoreSavedTabs, serializeSavedTabs } from '../js/domain/tab-state.js';
 
 test('new tabs do not share mutable arrays', () => {
   const a = createTab(), b = createTab();
@@ -36,4 +36,21 @@ test('transient map and GPS state is not restored', () => {
   assert.equal(tabs.gps.mapOpen, false);
   assert.equal(tabs.gps.origin, null);
   assert.equal(tabs.gps.lastSwitch, 0);
+});
+
+test('persisted state excludes GPS coordinates and map objects', () => {
+  const tabs = restoreSavedTabs(null);
+  tabs.gps.selected = { id: '8503610', name: 'Triemli' };
+  tabs.gps.stops = [{ id: '8503610', name: 'Triemli', lat: 47.3, lng: 8.5, distance: 20 }];
+  tabs.gps.origin = { lat: 47.3, lng: 8.5 };
+  tabs.gps.mapData = { origin: tabs.gps.origin };
+  tabs.manual.manualLocation = 'Zürich';
+  const serialized = JSON.stringify(serializeSavedTabs(tabs));
+  assert.equal(serialized.includes('47.3'), false);
+  assert.equal(serialized.includes('8.5'), false);
+  assert.equal(serialized.includes('mapData'), false);
+  assert.equal(serialized.includes('origin'), false);
+  const restored = restoreSavedTabs(JSON.parse(serialized));
+  assert.equal(restored.gps.selected.id, '8503610');
+  assert.equal(restored.manual.manualLocation, 'Zürich');
 });
