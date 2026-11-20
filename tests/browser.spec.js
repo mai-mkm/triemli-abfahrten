@@ -57,5 +57,7 @@ test('restores the manual tab selection and search text after reload without lea
   await page.reload();
   await page.locator('#manualMode').click();
   await expect(page.locator('#stopSearch')).toHaveValue('Zürich HB');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('fahrplan-state-v2')).manual.selected.name)).toBe('Zürich HB');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('fahrplan-state-v2')).gps.selected.name)).toBe('Zürich, Triemli');
   expect(errors).toEqual([]);
 });
