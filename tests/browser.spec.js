@@ -33,6 +33,8 @@ test('restores the manual tab selection and search text after reload without lea
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => {
+    if (sessionStorage.getItem('tab-test-seeded')) return;
+    sessionStorage.setItem('tab-test-seeded', '1');
     localStorage.clear();
     localStorage.setItem('fahrplan-state-v2', JSON.stringify({
       gps: { selected: { id: '8503610', name: 'Zürich, Triemli' }, stops: [], index: 0 },
