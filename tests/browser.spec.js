@@ -61,3 +61,36 @@ test('restores the manual tab selection and search text after reload without lea
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('fahrplan-state-v2')).gps.selected.name)).toBe('Zürich, Triemli');
   expect(errors).toEqual([]);
 });
+
+
+test('Google Maps settings remain reachable on a small iPhone viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 664 });
+  await page.route('https://transport.opendata.ch/v1/stationboard**', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"stationboard":[]}' })
+  );
+  await page.route('https://transport.opendata.ch/v1/locations**', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"stations":[]}' })
+  );
+  await page.goto('/');
+  await page.locator('#mapAccordion').evaluate(el => {
+    el.open = true;
+    el.classList.add('map-expanded');
+  });
+  await page.locator('#mapSettings').evaluate(el => { el.open = true; });
+  const result = await page.locator('#mapAccordion').evaluate(el => {
+    const button = el.querySelector('#saveMap');
+    el.scrollTop = el.scrollHeight;
+    const container = el.getBoundingClientRect();
+    const target = button.getBoundingClientRect();
+    return {
+      scrollable: el.scrollHeight > el.clientHeight,
+      buttonVisible: target.top >= container.top - 2 && target.bottom <= container.bottom + 2,
+      buttonHeight: target.height,
+      buttonDisplay: getComputedStyle(button).display
+    };
+  });
+  expect(result.scrollable).toBe(true);
+  expect(result.buttonVisible).toBe(true);
+  expect(result.buttonHeight).toBeGreaterThanOrEqual(44);
+  expect(result.buttonDisplay).not.toBe('none');
+});
