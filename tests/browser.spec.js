@@ -72,6 +72,9 @@ test('Google Maps settings remain reachable on a small iPhone viewport', async (
     route.fulfill({ status: 200, contentType: 'application/json', body: '{"stations":[]}' })
   );
   await page.goto('/');
+  // The mocked API returns no nearby stations, so the app hides #nearby.
+  // Reveal the containing section to test the map panel's mobile layout in isolation.
+  await page.locator('#nearby').evaluate(el => { el.hidden = false; });
   await page.locator('#mapAccordion').evaluate(el => {
     el.open = true;
     el.classList.add('map-expanded');
