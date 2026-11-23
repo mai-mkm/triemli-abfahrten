@@ -98,3 +98,52 @@ test('Google Maps settings remain reachable on a small iPhone viewport', async (
   expect(result.buttonHeight).toBeGreaterThanOrEqual(44);
   expect(result.buttonDisplay).not.toBe('none');
 });
+
+
+test('keeps a manually chosen GPS station after switching tabs and refreshing GPS', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.clear();
+    let watchId = 0;
+    Object.defineProperty(navigator.geolocation, 'watchPosition', {
+      configurable: true,
+      value: callback => {
+        const id = ++watchId;
+        setTimeout(() => {
+          if (id === watchId) callback({ coords: { latitude: 47.36, longitude: 8.50, accuracy: 5 } });
+        }, 0);
+        return id;
+      }
+    });
+    Object.defineProperty(navigator.geolocation, 'clearWatch', {
+      configurable: true, value: () => { watchId++; }
+    });
+  });
+  const stations = Array.from({ length: 10 }, (_, i) => ({
+    id: String(8503610 + i), name: 'GPS Test ' + i,
+    coordinate: { x: 47.36 + i * 0.001, y: 8.50 }
+  }));
+  await page.route('https://transport.opendata.ch/v1/stationboard**', route =>
+    route.fulfill({ json: { stationboard: [] } }));
+  let gpsRequests = 0;
+  await page.route('https://transport.opendata.ch/v1/locations**', route => {
+    if (new URL(route.request().url()).searchParams.has('x')) gpsRequests++;
+    return route.fulfill({ json: { stations } });
+  });
+  await page.route('https://data.sbb.ch/**', route =>
+    route.fulfill({ json: [{ designationofficial: 'Manual Test', number: 8503000, stoppoint: true }] }));
+  await page.goto('/');
+  await expect(page.locator('#nearbyList')).toContainText('GPS Test 0');
+  await page.locator('#nextNearby').click();
+  await expect(page.locator('#nearbyList')).toContainText('GPS Test 1');
+  const before = gpsRequests;
+  await page.locator('#manualMode').click();
+  await page.locator('#gpsMode').click();
+  await expect.poll(() => gpsRequests).toBeGreaterThan(before);
+  await expect(page.locator('#nearbyList')).toContainText('GPS Test 1');
+  await expect.poll(() => page.evaluate(() =>
+    JSON.parse(localStorage.getItem('fahrplan-state-v2')).gps.selected.id
+  )).toBe('8503611');
+  // Wait for the refreshed GPS request to be processed, not just issued.
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator('#nearbyList')).toContainText('GPS Test 1');
+});
