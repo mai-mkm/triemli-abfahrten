@@ -1,7 +1,7 @@
 // Each tab owns its selection and navigation state independently.
 export const createTab = () => ({
   selected: null, stops: [], index: 0, mapData: null, mapOpen: false,
-  origin: null, manualLocation: '', lastSwitch: 0
+  origin: null, manualLocation: '', lastSwitch: 0, manualSelection: false
 });
 
 export function restoreSavedTabs(raw) {
@@ -21,7 +21,7 @@ export function restoreSavedTabs(raw) {
       selected: saved.selected?.id != null && saved.selected?.name
         ? { ...saved.selected, id: String(saved.selected.id), name: String(saved.selected.name) }
         : null,
-      stops, index,
+      stops, index, manualSelection: key === 'gps' && saved.manualSelection === true,
       // Map handles and GPS coordinates should be recreated at runtime, not restored from storage.
       mapData: null, mapOpen: false, origin: null,
       manualLocation: typeof saved.manualLocation === 'string' ? saved.manualLocation : '',
@@ -45,6 +45,7 @@ export function serializeSavedTabs(tabs) {
         : [],
       index: Number.isInteger(tab.index)
         ? Math.min(Math.max(0, tab.index), Math.max(0, Math.min(tab.stops?.length ?? 0, 10) - 1)) : 0,
+      manualSelection: key === 'gps' && tab.manualSelection === true,
       manualLocation: key === 'manual' && typeof tab.manualLocation === 'string'
         ? tab.manualLocation : ''
     };
