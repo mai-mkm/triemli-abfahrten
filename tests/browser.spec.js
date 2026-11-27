@@ -125,7 +125,11 @@ test('keeps a manually chosen GPS station after switching tabs and refreshing GP
   const requestedIds = [];
   await page.route('https://transport.opendata.ch/v1/stationboard**', route => {
     requestedIds.push(new URL(route.request().url()).searchParams.get('id'));
-    return route.fulfill({ json: { stationboard: [] } });
+    const id = requestedIds.at(-1);
+    return route.fulfill({ json: { stationboard: [{
+      number: '14', category: 'T', to: 'Destination ' + id,
+      stop: { departure: new Date(Date.now() + 10 * 60_000).toISOString() }
+    }] } });
   });
   let gpsRequests = 0;
   await page.route('https://transport.opendata.ch/v1/locations**', route => {
@@ -139,6 +143,7 @@ test('keeps a manually chosen GPS station after switching tabs and refreshing GP
   await page.locator('#nextNearby').click();
   await expect(page.locator('#nearbyList')).toContainText('GPS Test 1');
   await expect.poll(() => requestedIds.at(-1)).toBe('8503611');
+  await expect(page.locator('#board')).toContainText('Destination 8503611');
   const before = gpsRequests;
   await page.locator('#manualMode').click();
   await page.locator('#gpsMode').click();
@@ -151,4 +156,5 @@ test('keeps a manually chosen GPS station after switching tabs and refreshing GP
   await page.waitForLoadState('networkidle');
   await expect(page.locator('#nearbyList')).toContainText('GPS Test 1');
   await expect.poll(() => requestedIds.at(-1)).toBe('8503611');
+  await expect(page.locator('#board')).toContainText('Destination 8503611');
 });
