@@ -122,8 +122,11 @@ test('keeps a manually chosen GPS station after switching tabs and refreshing GP
     id: String(8503610 + i), name: 'GPS Test ' + i,
     coordinate: { x: 47.36 + i * 0.001, y: 8.50 }
   }));
-  await page.route('https://transport.opendata.ch/v1/stationboard**', route =>
-    route.fulfill({ json: { stationboard: [] } }));
+  const requestedIds = [];
+  await page.route('https://transport.opendata.ch/v1/stationboard**', route => {
+    requestedIds.push(new URL(route.request().url()).searchParams.get('id'));
+    return route.fulfill({ json: { stationboard: [] } });
+  });
   let gpsRequests = 0;
   await page.route('https://transport.opendata.ch/v1/locations**', route => {
     if (new URL(route.request().url()).searchParams.has('x')) gpsRequests++;
@@ -135,6 +138,7 @@ test('keeps a manually chosen GPS station after switching tabs and refreshing GP
   await expect(page.locator('#nearbyList')).toContainText('GPS Test 0');
   await page.locator('#nextNearby').click();
   await expect(page.locator('#nearbyList')).toContainText('GPS Test 1');
+  await expect.poll(() => requestedIds.at(-1)).toBe('8503611');
   const before = gpsRequests;
   await page.locator('#manualMode').click();
   await page.locator('#gpsMode').click();
@@ -146,4 +150,5 @@ test('keeps a manually chosen GPS station after switching tabs and refreshing GP
   // Wait for the refreshed GPS request to be processed, not just issued.
   await page.waitForLoadState('networkidle');
   await expect(page.locator('#nearbyList')).toContainText('GPS Test 1');
+  await expect.poll(() => requestedIds.at(-1)).toBe('8503611');
 });
